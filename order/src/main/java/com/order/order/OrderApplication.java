@@ -8,6 +8,9 @@ public class OrderApplication {
 
 	public static void main(String[] args) {
 		SpringApplication.run(OrderApplication.class, args);
+		System.out.println("******************************");
+		System.out.println("ORDER SERVICE UPPPPPPP");
+		System.out.println("******************************");
 	}
 
 }
