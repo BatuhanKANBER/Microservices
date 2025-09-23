@@ -35,7 +35,8 @@ public class OrderService {
     }
 
     public Order getOrder(Long id) {
-        return orderRepository.findById(id).orElseThrow(() -> new RuntimeException("Order is not found."));
+        return orderRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Couldnt find order with id: " + id));
     }
 
     @RabbitListener(queues = RabbitConfig.ORDER_STATUS_QUEUE)
