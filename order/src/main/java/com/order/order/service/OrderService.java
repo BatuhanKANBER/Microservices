@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 
 import com.order.order.config.RabbitConfig;
 import com.order.order.dto.OrderEvent;
+import com.order.order.dto.QueueResponse;
 import com.order.order.model.Order;
 import com.order.order.model.Status;
 import com.order.order.repository.OrderRepository;
@@ -19,7 +20,7 @@ public class OrderService {
     private final AmqpTemplate rabbitTemplate;
 
     public Order createOrder(Order order) {
-        order.setStatus(Status.CREATED);
+        order.setStatus(Status.PENDING);
         Order savedOrder = orderRepository.save(order);
         OrderEvent event = new OrderEvent(order);
 
@@ -40,16 +41,40 @@ public class OrderService {
     }
 
     @RabbitListener(queues = RabbitConfig.ORDER_STATUS_QUEUE)
-    public void handleOrderCreated(OrderEvent event) {
-        updateStatus(event.getId(), event.getStatus().toString());
+    public void handleOrderCreated(QueueResponse event) {
+        if (event.getId() == null) {
+            System.out.println("Received order event with null ID, ignoring.");
+            return;
+        } else {
+            updateStatus(event.getId(), event.getStatus().toString());
+            System.out.println("HANDLE ORDER CREATED : " + event);
+        }
+    }
+
+    @RabbitListener(queues = RabbitConfig.PAYMENT_STATUS_QUEUE)
+    public void handlePayment(QueueResponse event) {
+        if (event.getId() == null) {
+            System.out.println("Received order event with null ID, ignoring.");
+            return;
+        } else {
+            updateStatus(event.getId(), event.getStatus().toString());
+            System.out.println("HANDLE PAYMENT : " + event);
+        }
     }
 
     public void updateStatus(Long orderId, String status) {
         Order order = getOrder(orderId);
-        if (status == "ACCEPTED") {
-            order.setStatus(Status.ACCEPTED);
+        System.out.println(status);
+        if (status.equals("APPROVED")) {
+            order.setStatus(Status.APPROVED);
+            OrderEvent event = new OrderEvent(order);
+            // Rabbit eventi gönderiliyor
+            rabbitTemplate.convertAndSend(
+                    RabbitConfig.ORDER_EXCHANGE,
+                    RabbitConfig.PRODUCT_STOCK_ROUTING_KEY,
+                    event);
         } else {
-            order.setStatus(Status.REJECTED);
+            order.setStatus(Status.CANCELLED);
         }
         orderRepository.save(order);
     }

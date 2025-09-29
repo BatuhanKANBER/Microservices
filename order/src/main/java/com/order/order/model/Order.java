@@ -23,7 +23,7 @@ public class Order {
     private Long id;
     private Long productId;
     private int quantity;
-
+    private double amount;
     @Enumerated(EnumType.STRING)
     private Status status;
 }

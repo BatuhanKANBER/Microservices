@@ -50,31 +50,48 @@ public class ProductService {
         Long orderId = (Long) event.getId();
         Long productId = (Long) event.getProductId();
         int quantity = (int) event.getQuantity();
+        double amount = (double) event.getAmount();
+        String status = (String) event.getStatus();
 
-        updateStock(orderId, productId, quantity);
+        if (isStockEnough(productId, quantity) == true) {
+            OrderEvent newEvent = new OrderEvent(orderId, productId, quantity, amount, status);
+            // Rabbit eventi gönderiliyor
+            rabbitTemplate.convertAndSend(
+                    RabbitConfig.ORDER_EXCHANGE,
+                    RabbitConfig.ORDER_AMOUNT_ROUTING_KEY,
+                    event);
+            System.out.println(newEvent);
+        } else {
+            OrderEvent newEvent = new OrderEvent(orderId, productId, quantity, amount, status);
+            newEvent.setStatus("CANCELLED");
+            // Rabbit eventi gönderiliyor
+            rabbitTemplate.convertAndSend(
+                    RabbitConfig.ORDER_EXCHANGE,
+                    RabbitConfig.ORDER_STATUS_ROUTING_KEY,
+                    event);
+            System.out.println(newEvent);
+        }
     }
 
-    public void updateStock(Long orderId, Long productId, int quantity) {
-        Product product = getProduct(productId);
+    @RabbitListener(queues = RabbitConfig.PRODUCT_STOCK_QUEUE)
+    public void handleStock(OrderEvent event) {
+        Long productId = (Long) event.getProductId();
+        int quantity = (int) event.getQuantity();
+        System.out.println("STOK" + event);
+        updateStock(productId, quantity);
+    }
 
-        if (product.getStock() < quantity) {
-            OrderEvent event = new OrderEvent(orderId, productId, quantity, "REJECTED");
-            // Rabbit eventi gönderiliyor
-            rabbitTemplate.convertAndSend(
-                    RabbitConfig.ORDER_EXCHANGE,
-                    RabbitConfig.ORDER_STATUS_ROUTING_KEY,
-                    event);
-            System.out.println(event);
-        } else {
-            product.setStock(product.getStock() - quantity);
-            productRepository.save(product);
-            OrderEvent event = new OrderEvent(orderId, productId, quantity, "ACCEPTED");
-            // Rabbit eventi gönderiliyor
-            rabbitTemplate.convertAndSend(
-                    RabbitConfig.ORDER_EXCHANGE,
-                    RabbitConfig.ORDER_STATUS_ROUTING_KEY,
-                    event);
-            System.out.println(event);
-        }
+    public boolean isStockEnough(Long productId, int quantity) {
+        Product product = getProduct(productId);
+        if (product.getStock() < quantity)
+            return false;
+
+        return true;
+    }
+
+    public void updateStock(Long productId, int quantity) {
+        Product product = getProduct(productId);
+        product.setStock(product.getStock() - quantity);
+        productRepository.save(product);
     }
 }

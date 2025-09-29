@@ -14,6 +14,7 @@ public class OrderEvent {
     private Long id;
     private Long productId;
     private int quantity;
+    private double amount;
     @Enumerated(EnumType.STRING)
     private Status status;
 
@@ -21,6 +22,7 @@ public class OrderEvent {
         setId(order.getId());
         setProductId(order.getProductId());
         setQuantity(order.getQuantity());
+        setAmount(order.getAmount());
         setStatus(order.getStatus());
     }
 }
