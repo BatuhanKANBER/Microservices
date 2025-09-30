@@ -46,7 +46,9 @@ public class OrderService {
             System.out.println("Received order event with null ID, ignoring.");
             return;
         } else {
-            updateStatus(event.getId(), event.getStatus().toString());
+            Order order = getOrder(event.getId());
+            order.setStatus(Status.CANCELLED);
+            orderRepository.save(order);
             System.out.println("HANDLE ORDER CREATED : " + event);
         }
     }
@@ -65,6 +67,7 @@ public class OrderService {
     public void updateStatus(Long orderId, String status) {
         Order order = getOrder(orderId);
         System.out.println(status);
+
         if (status.equals("APPROVED")) {
             order.setStatus(Status.APPROVED);
             OrderEvent event = new OrderEvent(order);
@@ -73,10 +76,9 @@ public class OrderService {
                     RabbitConfig.ORDER_EXCHANGE,
                     RabbitConfig.PRODUCT_STOCK_ROUTING_KEY,
                     event);
-        } else {
-            order.setStatus(Status.CANCELLED);
+            orderRepository.save(order);
         }
-        orderRepository.save(order);
+        return;
     }
 
 }
