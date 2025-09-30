@@ -46,9 +46,7 @@ public class OrderService {
             System.out.println("Received order event with null ID, ignoring.");
             return;
         } else {
-            Order order = getOrder(event.getId());
-            order.setStatus(Status.CANCELLED);
-            orderRepository.save(order);
+            updateStatusForCancelled(event.getId(), event.getStatus().toString());
             System.out.println("HANDLE ORDER CREATED : " + event);
         }
     }
@@ -59,12 +57,12 @@ public class OrderService {
             System.out.println("Received order event with null ID, ignoring.");
             return;
         } else {
-            updateStatus(event.getId(), event.getStatus().toString());
+            updateStatusForApproved(event.getId(), event.getStatus().toString());
             System.out.println("HANDLE PAYMENT : " + event);
         }
     }
 
-    public void updateStatus(Long orderId, String status) {
+    public void updateStatusForApproved(Long orderId, String status) {
         Order order = getOrder(orderId);
         System.out.println(status);
 
@@ -76,6 +74,17 @@ public class OrderService {
                     RabbitConfig.ORDER_EXCHANGE,
                     RabbitConfig.PRODUCT_STOCK_ROUTING_KEY,
                     event);
+            orderRepository.save(order);
+        }
+        return;
+    }
+
+    public void updateStatusForCancelled(Long orderId, String status) {
+        Order order = getOrder(orderId);
+        System.out.println(status);
+
+        if (status.equals("CANCELLED")) {
+            order.setStatus(Status.CANCELLED);
             orderRepository.save(order);
         }
         return;
